@@ -1,0 +1,7 @@
+{
+  "name": "AGRO EN CASA🥗🍇🥙",
+  "description": "An elegant e-commerce platform for ordering fresh agricultural products directly to your home, featuring AI-powered recipe suggestions.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
