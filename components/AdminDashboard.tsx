@@ -6,10 +6,10 @@ import TagIcon from './icons/TagIcon';
 import UsersIcon from './icons/UsersIcon';
 import CreditCardIcon from './icons/CreditCardIcon';
 import PaletteIcon from './icons/PaletteIcon';
-import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import MapPinIcon from './icons/MapPinIcon';
 import SearchIcon from './icons/SearchIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
+import MenuIcon from './icons/MenuIcon';
 
 
 interface AdminDashboardProps {
@@ -22,6 +22,7 @@ interface AdminDashboardProps {
   onUpdateStatus: (orderId: number, status: OrderStatus) => void;
   onStockUpdate: (productId: number, newStock: number) => void;
   onPriceUpdate: (productId: number, newPrice: number) => void;
+  onProductImageUpdate: (productId: number, imageFile: File) => void;
   onUpdateDeliveryZones: (zones: DeliveryZone[]) => void;
   currentUser: User | null;
   onChangePassword: (userId: number, oldPass: string, newPass: string) => { success: boolean; message: string };
@@ -269,13 +270,23 @@ const ProductManager: React.FC<{
   products: Product[],
   onStockUpdate: (productId: number, newStock: number) => void,
   onPriceUpdate: (productId: number, newPrice: number) => void,
-}> = ({ products, onStockUpdate, onPriceUpdate }) => {
+  onProductImageUpdate: (productId: number, imageFile: File) => void,
+}> = ({ products, onStockUpdate, onPriceUpdate, onProductImageUpdate }) => {
+    
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, productId: number) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            onProductImageUpdate(productId, file);
+        }
+    };
+
     return (
         <div className="bg-white p-4 rounded-lg shadow">
             <div className="overflow-x-auto">
-              <table className="w-full text-left min-w-[700px]">
+              <table className="w-full text-left min-w-[800px]">
                   <thead>
                       <tr className="border-b">
+                          <th className="p-2 font-semibold">Imagen</th>
                           <th className="p-2 font-semibold">Producto</th>
                           <th className="p-2 font-semibold">Precio Actual</th>
                           <th className="p-2 font-semibold">Nuevo Precio</th>
@@ -286,9 +297,23 @@ const ProductManager: React.FC<{
                   <tbody>
                       {products.map(product => (
                           <tr key={product.id} className="border-t">
-                              <td className="p-2 font-medium">{product.name}</td>
-                              <td className="p-2">${product.price.toFixed(2)} / {product.unit}</td>
-                              <td className="p-2">
+                              <td className="p-2 align-middle">
+                                <div className="flex flex-col items-center gap-2">
+                                  <img src={product.imageUrl} alt={product.name} className="w-16 h-16 object-cover rounded-md" />
+                                  <label className="cursor-pointer text-sm text-blue-600 hover:text-blue-800 underline">
+                                      Cambiar
+                                      <input
+                                          type="file"
+                                          accept="image/*"
+                                          className="hidden"
+                                          onChange={(e) => handleFileChange(e, product.id)}
+                                      />
+                                  </label>
+                                </div>
+                              </td>
+                              <td className="p-2 font-medium align-middle">{product.name}</td>
+                              <td className="p-2 align-middle">${product.price.toFixed(2)} / {product.unit}</td>
+                              <td className="p-2 align-middle">
                                   <input
                                       type="number"
                                       defaultValue={product.price.toFixed(2)}
@@ -298,8 +323,8 @@ const ProductManager: React.FC<{
                                       min="0"
                                   />
                               </td>
-                              <td className="p-2">{product.stock}</td>
-                              <td className="p-2">
+                              <td className="p-2 align-middle">{product.stock}</td>
+                              <td className="p-2 align-middle">
                                   <input
                                       type="number"
                                       defaultValue={product.stock}
@@ -656,32 +681,38 @@ const DeliverySettingsManager: React.FC<{
     const [newZone, setNewZone] = useState({ name: '', maxDistanceKm: '', cost: '' });
     const [editingZone, setEditingZone] = useState<DeliveryZone | null>(null);
 
+    useEffect(() => {
+        setLocalZones(zones);
+    }, [zones]);
+
     const handleAddNew = () => {
-        if (newZone.name && newZone.maxDistanceKm && newZone.cost) {
+        if (newZone.name && newZone.maxDistanceKm && newZone.cost && parseFloat(newZone.maxDistanceKm) > 0 && parseFloat(newZone.cost) >= 0) {
             const updatedZones = [...localZones, {
                 id: Date.now(),
                 name: newZone.name,
                 maxDistanceKm: parseFloat(newZone.maxDistanceKm),
                 cost: parseFloat(newZone.cost),
             }].sort((a, b) => a.maxDistanceKm - b.maxDistanceKm);
-            setLocalZones(updatedZones);
             onUpdate(updatedZones);
             setNewZone({ name: '', maxDistanceKm: '', cost: '' });
+        } else {
+            alert("Por favor, completa todos los campos con valores válidos.");
         }
     };
     
     const handleDelete = (id: number) => {
         if (window.confirm('¿Estás seguro de que deseas eliminar esta zona de envío?')) {
             const updatedZones = localZones.filter(z => z.id !== id);
-            setLocalZones(updatedZones);
             onUpdate(updatedZones);
         }
     };
 
     const handleUpdate = () => {
-        if (!editingZone) return;
+        if (!editingZone || editingZone.maxDistanceKm <= 0 || editingZone.cost < 0) {
+            alert("Los valores de distancia y costo no son válidos.");
+            return;
+        };
         const updatedZones = localZones.map(z => z.id === editingZone.id ? editingZone : z).sort((a,b) => a.maxDistanceKm - b.maxDistanceKm);
-        setLocalZones(updatedZones);
         onUpdate(updatedZones);
         setEditingZone(null);
     }
@@ -712,7 +743,6 @@ const DeliverySettingsManager: React.FC<{
             <div>
                 <h4 className="font-semibold mb-3 text-lg">Zonas Actuales</h4>
                 <div className="space-y-3">
-                    {/* Header */}
                     <div className="hidden md:grid grid-cols-4 gap-4 p-2 font-semibold text-gray-600 border-b">
                         <div>Nombre</div>
                         <div>Distancia Máxima</div>
@@ -723,7 +753,6 @@ const DeliverySettingsManager: React.FC<{
                         <div key={zone.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center p-3 border rounded-md hover:bg-gray-50">
                             {editingZone?.id === zone.id ? (
                                 <>
-                                    {/* Editing state */}
                                     <div><input type="text" value={editingZone.name} onChange={e => setEditingZone({...editingZone, name: e.target.value})} className="p-2 w-full border rounded" /></div>
                                     <div><input type="number" min="0" value={editingZone.maxDistanceKm} onChange={e => setEditingZone({...editingZone, maxDistanceKm: parseFloat(e.target.value) || 0})} className="p-2 w-full border rounded" /></div>
                                     <div><input type="number" min="0" value={editingZone.cost} onChange={e => setEditingZone({...editingZone, cost: parseFloat(e.target.value) || 0})} className="p-2 w-full border rounded" /></div>
@@ -734,7 +763,6 @@ const DeliverySettingsManager: React.FC<{
                                 </>
                             ) : (
                                 <>
-                                    {/* Display state */}
                                     <div className="font-medium">{zone.name}</div>
                                     <div>Hasta {zone.maxDistanceKm} KM</div>
                                     <div className="font-semibold">${zone.cost.toFixed(2)}</div>
@@ -756,11 +784,11 @@ const DeliverySettingsManager: React.FC<{
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
   const [activeTabKey, setActiveTabKey] = useState<string>('orders');
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   const TABS: Record<string, { label: string, icon: React.ReactNode, component: React.ReactNode }> = {
       orders: { label: 'Pedidos', icon: <BoxIcon />, component: <OrderManager orders={props.orders} onUpdateStatus={props.onUpdateStatus} /> },
-      products: { label: 'Productos', icon: <TagIcon />, component: <ProductManager products={props.products} onStockUpdate={props.onStockUpdate} onPriceUpdate={props.onPriceUpdate} /> },
+      products: { label: 'Productos', icon: <TagIcon />, component: <ProductManager products={props.products} onStockUpdate={props.onStockUpdate} onPriceUpdate={props.onPriceUpdate} onProductImageUpdate={props.onProductImageUpdate} /> },
       users: { label: 'Usuarios', icon: <UsersIcon />, component: <UserManager currentUser={props.currentUser} allUsers={props.allUsers} onChangePassword={props.onChangePassword} onCreateUser={props.onCreateUser} onDeleteUser={props.onDeleteUser} /> },
       shipping: { label: 'Envíos', icon: <MapPinIcon/>, component: <DeliverySettingsManager zones={props.deliveryZones} onUpdate={props.onUpdateDeliveryZones} /> },
       settings: { label: 'Pagos', icon: <CreditCardIcon />, component: <PaymentSettingsManager paymentMethods={props.paymentMethods} onUpdatePaymentMethods={props.onUpdatePaymentMethods} paymentDetails={props.paymentDetails} onUpdatePaymentDetails={props.onUpdatePaymentDetails} /> },
@@ -770,38 +798,61 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
   const activeTab = TABS[activeTabKey];
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-100">
-        <aside className={`bg-gray-800 text-white flex-shrink-0 flex flex-col transition-all duration-300 ${isSidebarCollapsed ? 'w-20' : 'w-64'}`}>
-            <div className="flex items-center justify-center h-16 border-b border-gray-700">
-              <h1 className={`text-xl font-bold whitespace-nowrap ${isSidebarCollapsed ? 'hidden' : 'block'}`}>Admin Panel</h1>
-              <h1 className={`text-xl font-bold ${!isSidebarCollapsed ? 'hidden' : 'block'}`}>AC</h1>
-            </div>
-            <nav className="flex-grow overflow-y-auto">
-                {Object.entries(TABS).map(([key, tab]) => (
-                    <button
-                        key={key}
-                        onClick={() => setActiveTabKey(key)}
-                        className={`w-full flex items-center p-4 transition-colors duration-200 group ${activeTabKey === key ? 'bg-primary' : 'hover:bg-gray-700'} ${isSidebarCollapsed ? 'justify-center' : ''}`}
-                        title={isSidebarCollapsed ? tab.label : ''}
-                    >
-                        <div className="w-6 h-6">{tab.icon}</div>
-                        {!isSidebarCollapsed && <span className="ml-4">{tab.label}</span>}
-                         {!isSidebarCollapsed || <span className="absolute left-full rounded-md px-2 py-1 ml-6 bg-primary text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0">{tab.label}</span>}
-                    </button>
-                ))}
-            </nav>
-            <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className="p-4 border-t border-gray-700 hover:bg-gray-700 flex items-center transition-colors duration-200 w-full">
-                <div className="w-6 h-6">
-                    <ChevronLeftIcon className={`transition-transform duration-300 ${isSidebarCollapsed ? 'rotate-180' : ''}`} />
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      <header className="bg-gray-800 text-white shadow-md sticky top-0 z-50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+                <div className="flex items-center">
+                    <h1 className="text-xl font-bold">Admin Panel</h1>
                 </div>
-                {!isSidebarCollapsed && <span className="ml-4">Contraer</span>}
-            </button>
-        </aside>
 
-        <main className="flex-grow overflow-y-auto p-6">
-            <h1 className="text-3xl font-bold mb-6 text-gray-800">{activeTab.label}</h1>
-            {activeTab.component}
-        </main>
+                {/* Desktop Navigation */}
+                <nav className="hidden md:flex items-center space-x-2">
+                    {Object.entries(TABS).map(([key, tab]) => (
+                        <button
+                            key={key}
+                            onClick={() => setActiveTabKey(key)}
+                            className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${activeTabKey === key ? 'bg-primary text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
+                        >
+                            <span className="w-5 h-5 mr-2">{tab.icon}</span>
+                            {tab.label}
+                        </button>
+                    ))}
+                </nav>
+
+                {/* Mobile Menu Button */}
+                <div className="md:hidden">
+                    <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                        <span className="sr-only">Open main menu</span>
+                        <MenuIcon className="h-6 w-6" />
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {/* Mobile Dropdown Menu */}
+        {isMenuOpen && (
+            <nav className="md:hidden bg-gray-800 border-t border-gray-700">
+                <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                    {Object.entries(TABS).map(([key, tab]) => (
+                        <button
+                            key={key}
+                            onClick={() => { setActiveTabKey(key); setIsMenuOpen(false); }}
+                            className={`w-full flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${activeTabKey === key ? 'bg-primary text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
+                        >
+                           <span className="w-5 h-5 mr-3">{tab.icon}</span>
+                           {tab.label}
+                        </button>
+                    ))}
+                </div>
+            </nav>
+        )}
+      </header>
+
+      <main className="flex-grow container mx-auto p-6">
+          <h1 className="text-3xl font-bold mb-6 text-gray-800">{activeTab.label}</h1>
+          {activeTab.component}
+      </main>
     </div>
   );
 };

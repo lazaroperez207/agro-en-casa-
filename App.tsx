@@ -262,6 +262,24 @@ const App: React.FC = () => {
       )
     );
   };
+
+  const handleProductImageUpdate = (productId: number, imageFile: File) => {
+    if (!imageFile.type.startsWith('image/')) {
+        console.error('Invalid file type selected for product image.');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setProducts(prevProducts =>
+            prevProducts.map(p =>
+                p.id === productId ? { ...p, imageUrl: result } : p
+            )
+        );
+    };
+    reader.readAsDataURL(imageFile);
+  };
   
   const handleUpdateLogo = (logoFile: File): { success: boolean, message: string } => {
     if (!logoFile.type.startsWith('image/')) {
@@ -327,6 +345,7 @@ const App: React.FC = () => {
                   onUpdateStatus={handleUpdateOrderStatus} 
                   onStockUpdate={handleStockUpdate}
                   onPriceUpdate={handlePriceUpdate}
+                  onProductImageUpdate={handleProductImageUpdate}
                   onUpdateDeliveryZones={handleUpdateDeliveryZones}
                   currentUser={currentUser}
                   onChangePassword={handleChangePassword}
