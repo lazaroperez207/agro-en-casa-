@@ -1,3 +1,4 @@
+
 export interface Product {
   id: number;
   name: string;
@@ -20,6 +21,7 @@ export interface User {
   password?: string;
   role: Role;
   name: string;
+  permissions?: string[];
 }
 
 export type OrderStatus = 'Pendiente' | 'Pendiente de Pago' | 'Aprobado' | 'En Preparación' | 'Listo para Mensajería' | 'En Camino' | 'Entregado' | 'Cancelado';

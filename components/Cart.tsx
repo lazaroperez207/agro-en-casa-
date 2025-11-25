@@ -25,6 +25,12 @@ const Cart: React.FC<CartProps> = ({
     return cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
   }, [cartItems]);
   
+  const handleQuantityChange = (productId: number, newQuantity: number) => {
+    // Validation: Quantity cannot be less than 1
+    if (newQuantity < 1) return;
+    onUpdateQuantity(productId, newQuantity);
+  };
+
   return (
     <>
       <div
@@ -66,14 +72,26 @@ const Cart: React.FC<CartProps> = ({
                   <h3 className="font-semibold">{item.name}</h3>
                   <p className="text-text-secondary text-sm">${item.price.toFixed(2)} / {item.unit}</p>
                   <div className="flex items-center mt-2">
+                    <button 
+                        onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                        className="w-8 h-8 border rounded-l-md bg-gray-100 hover:bg-gray-200"
+                    >
+                        -
+                    </button>
                     <input
                       type="number"
                       value={item.quantity}
-                      onChange={(e) => onUpdateQuantity(item.id, parseInt(e.target.value, 10))}
+                      onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value, 10))}
                       min="1"
-                      className="w-16 border rounded-md text-center"
+                      className="w-12 border-t border-b h-8 text-center"
                       aria-label={`Cantidad de ${item.name}`}
                     />
+                     <button 
+                        onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                        className="w-8 h-8 border rounded-r-md bg-gray-100 hover:bg-gray-200"
+                    >
+                        +
+                    </button>
                   </div>
                 </div>
                 <button onClick={() => onRemoveItem(item.id)} className="text-red-500 hover:text-red-700 ml-4" aria-label={`Quitar ${item.name} del carrito`}>

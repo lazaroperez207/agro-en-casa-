@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Product, CartItem, User, Order, OrderStatus, Notification, Role, DeliveryZone, SocialLinks, PaymentMethod, PaymentDetails } from './types';
 import { PRODUCTS, USERS, ORDERS as MOCK_ORDERS, DELIVERY_ZONES, INITIAL_SOCIAL_LINKS, PAYMENT_METHODS as INITIAL_PAYMENT_METHODS, INITIAL_PAYMENT_DETAILS } from './constants';
@@ -263,6 +264,27 @@ const App: React.FC = () => {
     );
   };
 
+  const handleProductNameUpdate = (productId: number, newName: string) => {
+    setProducts(prevProducts =>
+      prevProducts.map(p =>
+        p.id === productId ? { ...p, name: newName } : p
+      )
+    );
+  };
+  
+  const handleProductCategoryUpdate = (productId: number, newCategory: string) => {
+    setProducts(prevProducts =>
+      prevProducts.map(p =>
+        p.id === productId ? { ...p, category: newCategory } : p
+      )
+    );
+  };
+
+  const handleAddProduct = (newProduct: Omit<Product, 'id'>) => {
+    const productWithId = { ...newProduct, id: Date.now() };
+    setProducts(prev => [...prev, productWithId]);
+  };
+
   const handleProductImageUpdate = (productId: number, imageFile: File) => {
     if (!imageFile.type.startsWith('image/')) {
         console.error('Invalid file type selected for product image.');
@@ -345,7 +367,10 @@ const App: React.FC = () => {
                   onUpdateStatus={handleUpdateOrderStatus} 
                   onStockUpdate={handleStockUpdate}
                   onPriceUpdate={handlePriceUpdate}
+                  onProductNameUpdate={handleProductNameUpdate}
+                  onProductCategoryUpdate={handleProductCategoryUpdate}
                   onProductImageUpdate={handleProductImageUpdate}
+                  onAddProduct={handleAddProduct}
                   onUpdateDeliveryZones={handleUpdateDeliveryZones}
                   currentUser={currentUser}
                   onChangePassword={handleChangePassword}

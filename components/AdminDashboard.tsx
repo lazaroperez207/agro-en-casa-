@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Order, Product, OrderStatus, PaymentMethod, User, DeliveryZone, SocialLinks, PaymentDetails } from '../types';
 import TrashIcon from './icons/TrashIcon';
@@ -22,6 +23,9 @@ interface AdminDashboardProps {
   onUpdateStatus: (orderId: number, status: OrderStatus) => void;
   onStockUpdate: (productId: number, newStock: number) => void;
   onPriceUpdate: (productId: number, newPrice: number) => void;
+  onProductNameUpdate: (productId: number, newName: string) => void;
+  onProductCategoryUpdate: (productId: number, newCategory: string) => void;
+  onAddProduct: (newProduct: Omit<Product, 'id'>) => void;
   onProductImageUpdate: (productId: number, imageFile: File) => void;
   onUpdateDeliveryZones: (zones: DeliveryZone[]) => void;
   currentUser: User | null;
@@ -270,73 +274,186 @@ const ProductManager: React.FC<{
   products: Product[],
   onStockUpdate: (productId: number, newStock: number) => void,
   onPriceUpdate: (productId: number, newPrice: number) => void,
+  onProductNameUpdate: (productId: number, newName: string) => void,
+  onProductCategoryUpdate: (productId: number, newCategory: string) => void,
+  onAddProduct: (newProduct: Omit<Product, 'id'>) => void,
   onProductImageUpdate: (productId: number, imageFile: File) => void,
-}> = ({ products, onStockUpdate, onPriceUpdate, onProductImageUpdate }) => {
+}> = ({ products, onStockUpdate, onPriceUpdate, onProductNameUpdate, onProductCategoryUpdate, onAddProduct, onProductImageUpdate }) => {
     
+    const [newProduct, setNewProduct] = useState({
+        name: '',
+        price: '',
+        category: 'Productos Agrícolas',
+        unit: 'libra',
+        stock: '',
+        imageUrl: 'https://images.unsplash.com/photo-1599819098376-e5d71b53c6e2?w=400&auto=format&fit=crop'
+    });
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, productId: number) => {
         const file = e.target.files?.[0];
         if (file) {
             onProductImageUpdate(productId, file);
         }
     };
+    
+    const handleNewProductFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+             const reader = new FileReader();
+            reader.onload = (e) => {
+                const result = e.target?.result as string;
+                setNewProduct(prev => ({ ...prev, imageUrl: result }));
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    const handleAdd = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newProduct.name && newProduct.price && newProduct.stock) {
+            onAddProduct({
+                name: newProduct.name,
+                price: parseFloat(newProduct.price),
+                category: newProduct.category,
+                unit: newProduct.unit as any,
+                stock: parseInt(newProduct.stock),
+                imageUrl: newProduct.imageUrl
+            });
+            setNewProduct({
+                name: '',
+                price: '',
+                category: 'Productos Agrícolas',
+                unit: 'libra',
+                stock: '',
+                imageUrl: 'https://images.unsplash.com/photo-1599819098376-e5d71b53c6e2?w=400&auto=format&fit=crop'
+            });
+            alert('Producto añadido con éxito');
+        } else {
+            alert('Por favor completa todos los campos requeridos');
+        }
+    };
 
     return (
-        <div className="bg-white p-4 rounded-lg shadow">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left min-w-[800px]">
-                  <thead>
-                      <tr className="border-b">
-                          <th className="p-2 font-semibold">Imagen</th>
-                          <th className="p-2 font-semibold">Producto</th>
-                          <th className="p-2 font-semibold">Precio Actual</th>
-                          <th className="p-2 font-semibold">Nuevo Precio</th>
-                          <th className="p-2 font-semibold">Stock Actual</th>
-                          <th className="p-2 font-semibold">Nuevo Stock</th>
-                      </tr>
-                  </thead>
-                  <tbody>
-                      {products.map(product => (
-                          <tr key={product.id} className="border-t">
-                              <td className="p-2 align-middle">
-                                <div className="flex flex-col items-center gap-2">
-                                  <img src={product.imageUrl} alt={product.name} className="w-16 h-16 object-cover rounded-md" />
-                                  <label className="cursor-pointer text-sm text-blue-600 hover:text-blue-800 underline">
-                                      Cambiar
-                                      <input
-                                          type="file"
-                                          accept="image/*"
-                                          className="hidden"
-                                          onChange={(e) => handleFileChange(e, product.id)}
-                                      />
-                                  </label>
-                                </div>
-                              </td>
-                              <td className="p-2 font-medium align-middle">{product.name}</td>
-                              <td className="p-2 align-middle">${product.price.toFixed(2)} / {product.unit}</td>
-                              <td className="p-2 align-middle">
-                                  <input
-                                      type="number"
-                                      defaultValue={product.price.toFixed(2)}
-                                      onBlur={(e) => onPriceUpdate(product.id, parseFloat(e.target.value) || 0)}
-                                      className="w-24 border rounded-md p-1 text-center"
-                                      step="0.01"
-                                      min="0"
-                                  />
-                              </td>
-                              <td className="p-2 align-middle">{product.stock}</td>
-                              <td className="p-2 align-middle">
-                                  <input
-                                      type="number"
-                                      defaultValue={product.stock}
-                                      onBlur={(e) => onStockUpdate(product.id, parseInt(e.target.value, 10) || 0)}
-                                      className="w-24 border rounded-md p-1 text-center"
-                                      min="0"
-                                  />
-                              </td>
-                          </tr>
-                      ))}
-                  </tbody>
-              </table>
+        <div className="space-y-8">
+            <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-xl font-bold mb-4">Agregar Nuevo Producto</h3>
+                <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Nombre</label>
+                        <input type="text" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} className="mt-1 p-2 w-full border rounded-md" required />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Precio</label>
+                        <input type="number" value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})} className="mt-1 p-2 w-full border rounded-md" required />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Categoría</label>
+                        <select value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} className="mt-1 p-2 w-full border rounded-md">
+                            <option value="Productos Agrícolas">Productos Agrícolas</option>
+                            <option value="Productos Cárnicos">Productos Cárnicos</option>
+                            <option value="Productos Variados">Productos Variados</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Unidad</label>
+                        <select value={newProduct.unit} onChange={e => setNewProduct({...newProduct, unit: e.target.value})} className="mt-1 p-2 w-full border rounded-md">
+                             <option value="libra">libra</option>
+                             <option value="mazo">mazo</option>
+                             <option value="unidad">unidad</option>
+                             <option value="mano">mano</option>
+                             <option value="cabeza">cabeza</option>
+                             <option value="paquete">paquete</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Stock Inicial</label>
+                        <input type="number" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: e.target.value})} className="mt-1 p-2 w-full border rounded-md" required />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Imagen</label>
+                        <input type="file" accept="image/*" onChange={handleNewProductFileChange} className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-dark/10 file:text-primary-dark hover:file:bg-primary-dark/20" />
+                    </div>
+                    <button type="submit" className="bg-green-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-green-700 transition">Agregar Producto</button>
+                </form>
+            </div>
+
+            <div className="bg-white p-4 rounded-lg shadow">
+                <h3 className="text-xl font-bold mb-4">Inventario de Productos</h3>
+                <div className="overflow-x-auto">
+                <table className="w-full text-left min-w-[800px]">
+                    <thead>
+                        <tr className="border-b">
+                            <th className="p-2 font-semibold">Imagen</th>
+                            <th className="p-2 font-semibold">Producto</th>
+                            <th className="p-2 font-semibold">Categoría</th>
+                            <th className="p-2 font-semibold">Precio</th>
+                            <th className="p-2 font-semibold">Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {products.map(product => (
+                            <tr key={product.id} className="border-t hover:bg-gray-50">
+                                <td className="p-2 align-middle">
+                                    <div className="flex flex-col items-center gap-2">
+                                    <img src={product.imageUrl} alt={product.name} className="w-16 h-16 object-cover rounded-md" />
+                                    <label className="cursor-pointer text-xs text-blue-600 hover:text-blue-800 underline">
+                                        Cambiar Foto
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => handleFileChange(e, product.id)}
+                                        />
+                                    </label>
+                                    </div>
+                                </td>
+                                <td className="p-2 align-middle">
+                                    <input 
+                                        type="text" 
+                                        defaultValue={product.name}
+                                        onBlur={(e) => onProductNameUpdate(product.id, e.target.value)}
+                                        className="border rounded px-2 py-1 w-full"
+                                    />
+                                </td>
+                                <td className="p-2 align-middle">
+                                    <select 
+                                        value={product.category}
+                                        onChange={(e) => onProductCategoryUpdate(product.id, e.target.value)}
+                                        className="border rounded px-2 py-1 w-full text-sm"
+                                    >
+                                        <option value="Productos Agrícolas">Productos Agrícolas</option>
+                                        <option value="Productos Cárnicos">Productos Cárnicos</option>
+                                        <option value="Productos Variados">Productos Variados</option>
+                                    </select>
+                                </td>
+                                <td className="p-2 align-middle">
+                                    <div className="flex items-center">
+                                        <span className="mr-1">$</span>
+                                        <input
+                                            type="number"
+                                            defaultValue={product.price.toFixed(2)}
+                                            onBlur={(e) => onPriceUpdate(product.id, parseFloat(e.target.value) || 0)}
+                                            className="w-20 border rounded px-1 text-right"
+                                            step="0.01"
+                                            min="0"
+                                        />
+                                        <span className="text-xs text-gray-500 ml-1">/{product.unit}</span>
+                                    </div>
+                                </td>
+                                <td className="p-2 align-middle">
+                                    <input
+                                        type="number"
+                                        defaultValue={product.stock}
+                                        onBlur={(e) => onStockUpdate(product.id, parseInt(e.target.value, 10) || 0)}
+                                        className="w-16 border rounded px-1 text-center"
+                                        min="0"
+                                    />
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                </div>
             </div>
         </div>
     );
@@ -788,7 +905,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
   
   const TABS: Record<string, { label: string, icon: React.ReactNode, component: React.ReactNode }> = {
       orders: { label: 'Pedidos', icon: <BoxIcon />, component: <OrderManager orders={props.orders} onUpdateStatus={props.onUpdateStatus} /> },
-      products: { label: 'Productos', icon: <TagIcon />, component: <ProductManager products={props.products} onStockUpdate={props.onStockUpdate} onPriceUpdate={props.onPriceUpdate} onProductImageUpdate={props.onProductImageUpdate} /> },
+      products: { 
+          label: 'Productos', 
+          icon: <TagIcon />, 
+          component: <ProductManager 
+                        products={props.products} 
+                        onStockUpdate={props.onStockUpdate} 
+                        onPriceUpdate={props.onPriceUpdate} 
+                        onProductNameUpdate={props.onProductNameUpdate}
+                        onProductCategoryUpdate={props.onProductCategoryUpdate}
+                        onProductImageUpdate={props.onProductImageUpdate} 
+                        onAddProduct={props.onAddProduct}
+                     /> 
+      },
       users: { label: 'Usuarios', icon: <UsersIcon />, component: <UserManager currentUser={props.currentUser} allUsers={props.allUsers} onChangePassword={props.onChangePassword} onCreateUser={props.onCreateUser} onDeleteUser={props.onDeleteUser} /> },
       shipping: { label: 'Envíos', icon: <MapPinIcon/>, component: <DeliverySettingsManager zones={props.deliveryZones} onUpdate={props.onUpdateDeliveryZones} /> },
       settings: { label: 'Pagos', icon: <CreditCardIcon />, component: <PaymentSettingsManager paymentMethods={props.paymentMethods} onUpdatePaymentMethods={props.onUpdatePaymentMethods} paymentDetails={props.paymentDetails} onUpdatePaymentDetails={props.onUpdatePaymentDetails} /> },
